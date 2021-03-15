@@ -8,9 +8,6 @@ from PIL import Image
 from copy import deepcopy
 import os
 import numpy as np
-import sys
-
-#sys.stdout.reconfigure(encoding='utf-8')
 
 black_figures = None
 white_figures = None
@@ -87,7 +84,7 @@ def find_most_similar_figure(image, color):
 	return figure, piece_color
 # %%
 
-def read_board_from_image(directory_path):
+def read_board_from_image(directory_path, show = False):
 	global black_figures, white_figures, set_number
 	
 	set_number = int(directory_path.split('/')[-1])
@@ -112,7 +109,9 @@ def read_board_from_image(directory_path):
 	print(str(first[0]) + "," + str(first[1]))
 	area = (first[1], first[0], last[1] + 1 , last[0] + 1)
 	chessboard = chessboard.crop(area)
-	#chessboard.show()
+	
+	if(show):
+		chessboard.show()
 	
 	chessboard_shape = np.asarray(chessboard).shape
 	
@@ -219,9 +218,14 @@ directions_king = [
 	(1, 1)
 ]
 
-def is_check():
+def is_check(color = None):
 	global board, directions_pawn, directions_knight, directions_biship, directions_rook
-	for king_color in ['white', 'black']:
+	
+	king_colors = ['white', 'black']
+	
+	if(color != None):
+		king_colors = [color]
+	for king_color in king_colors:
 		king_pos = find_king(king_color)
 		
 		checked_from = []
@@ -277,6 +281,11 @@ def is_check():
 				(1, 1),
 				(1, -1)
 			]
+		else:
+			directions_pawn = [
+				(-1, 1),
+				(-1, -1)
+			]
 			
 		for i,j in directions_pawn:
 			if(is_valid_coord(x + i, y + j) and board[x + i, y + j] != 0):
@@ -285,7 +294,7 @@ def is_check():
 					#checked_from.append((x,y))
 					return king_color	
 	
-	return None, None
+	return None
 
 fen_figures = {
 	('queen','white') : 'Q',
@@ -351,7 +360,7 @@ def print_is_checkmate(color):
 							prevBoard = deepcopy(board[x,y])
 							board[x,y] = deepcopy(board[fx,fy])
 							board[fx,fy] = 0
-							if(is_check() == (None, None)):
+							if(is_check(color) != color):
 								print('0')
 								return
 							board[fx,fy] = deepcopy(board[x,y])
@@ -377,7 +386,7 @@ def print_is_checkmate(color):
 							prevBoard = deepcopy(board[x,y])
 							board[x,y] = deepcopy(board[fx,fy])
 							board[fx,fy] = 0
-							if(is_check() == (None, None)):
+							if(is_check(color) != color):
 								print('0')
 								return
 							board[fx,fy] = deepcopy(board[x,y])
@@ -414,7 +423,7 @@ def print_is_checkmate(color):
 						prevBoard = deepcopy(board[x,y])
 						board[x,y] = deepcopy(board[fx,fy])
 						board[fx,fy] = 0
-						if(is_check() == (None, None)):
+						if(is_check(color) != color):
 							print('0')
 							return
 						board[fx,fy] = deepcopy(board[x,y])
@@ -429,7 +438,7 @@ def print_is_checkmate(color):
 							prevBoard = deepcopy(board[x,y])
 							board[x,y] = deepcopy(board[fx,fy])
 							board[fx,fy] = 0
-							if(is_check() == (None, None)):
+							if(is_check(color) != color):
 								print('0')
 								return
 							board[fx,fy] = deepcopy(board[x,y])
@@ -448,7 +457,7 @@ def print_is_checkmate(color):
 						prevBoard = deepcopy(board[x,y])
 						board[x,y] = deepcopy(board[fx,fy])
 						board[fx,fy] = 0
-						if(is_check() == (None, None)):
+						if(is_check(color) != color):
 							print('0')
 							return
 						board[fx,fy] = deepcopy(board[x,y])
@@ -467,7 +476,7 @@ def print_is_checkmate(color):
 						prevBoard = deepcopy(board[x,y])
 						board[x,y] = deepcopy(board[fx,fy])
 						board[fx,fy] = 0
-						if(is_check() == (None, None)):
+						if(is_check(color) != color):
 							for s,l in directions_king:
 								if(not is_valid_coord(x + s, y + l)):
 									continue
@@ -484,23 +493,25 @@ def print_is_checkmate(color):
 	return				
 	
 # %%
-#directory_path = input()
-for sss in range(25):
-	print(str(sss) + "**************************************")
-	directory_path = "D:/GitHub/Chess-solver/public/set/" + str(sss)
-	
-	board = np.array(read_board_from_image(directory_path))
-	print_fen_notation()
-	
-	checked_color = is_check()
-	
-	if(checked_color == None):
-		print("-")
-		print('0')
+directory_path = input()
+#for sss in range(26):
+	#print(str(sss) + "**************************************")
+	#sss = 17
+	#directory_path = "D:/GitHub/Chess-solver/public/set/" + str(sss)
+
+board = np.array(read_board_from_image(directory_path#,True
+			  ))
+print_fen_notation()
+
+checked_color = is_check()
+
+if(checked_color == None):
+	print("-")
+	print('0')
+else:
+	if(checked_color == 'white'):
+		print('B')
 	else:
-		if(checked_color == 'white'):
-			print('B')
-		else:
-			print('W')
-	
-		print_is_checkmate(checked_color)
+		print('W')
+
+	print_is_checkmate(checked_color)
