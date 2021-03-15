@@ -8,10 +8,13 @@ from PIL import Image
 from copy import deepcopy
 import os
 import numpy as np
+import sys
+
+#sys.stdout.reconfigure(encoding='utf-8')
 
 black_figures = None
 white_figures = None
-set_number = 16
+set_number = 3
 
 def find_first_and_last_pixel_in_image(image_color, image):
 	img = np.asarray(image)
@@ -84,30 +87,32 @@ def find_most_similar_figure(image, color):
 	return figure, piece_color
 # %%
 
-def read_board_from_image():
+def read_board_from_image(directory_path):
 	global black_figures, white_figures, set_number
 	
-	set_directory = "D:\\GitHub\\Chessboard Solver\\checkmate_public\\public\\set\\" + str(set_number)
+	set_number = int(directory_path.split('/')[-1])
+	set_directory = directory_path
 	
-	chessboard = Image.open(set_directory + "\\"+ str(set_number) + ".png")
+	chessboard = Image.open(set_directory + "/"+ str(set_number) + ".png")
 	
-	tiles_directory = set_directory + "\\tiles"
-	pieces_directory = set_directory + "\\pieces"
+	tiles_directory = set_directory + "/tiles"
+	pieces_directory = set_directory + "/pieces"
 	
-	black_tile = Image.open(tiles_directory + "\\black.png").convert("RGBA")
-	white_tile = Image.open(tiles_directory + "\\white.png").convert("RGBA")
+	black_tile = Image.open(tiles_directory + "/black.png").convert("RGBA")
+	white_tile = Image.open(tiles_directory + "/white.png").convert("RGBA")
 	
-	black_figures_directory = pieces_directory + "\\black"
-	white_figures_directory = pieces_directory + "\\white"
+	black_figures_directory = pieces_directory + "/black"
+	white_figures_directory = pieces_directory + "/white"
 	
 	black_figures = load_images_from_folder(black_figures_directory, black_tile, white_tile)
 	
 	white_figures = load_images_from_folder(white_figures_directory, black_tile, white_tile)
 	
 	first, last = find_first_and_last_pixel_in_image(white_tile, chessboard)
+	print(str(first[0]) + "," + str(first[1]))
 	area = (first[1], first[0], last[1] + 1 , last[0] + 1)
 	chessboard = chessboard.crop(area)
-	chessboard.show()
+	#chessboard.show()
 	
 	chessboard_shape = np.asarray(chessboard).shape
 	
@@ -154,9 +159,6 @@ def read_board_from_image():
 		if((i + j) % 2 != 0):
 			tile_color = 'black'
 		
-		if(i == 1 and j == 0):
-			print()
-		
 		if(tile_color == 'white' and pic_similarity(tile, white_tile) < 1000):
 			continue
 		elif(tile_color == 'black' and pic_similarity(tile, black_tile) < 1000):
@@ -176,41 +178,53 @@ def find_king(color):
 def is_valid_coord(x,y):
 	return (x < 8 and y < 8 and x >= 0 and y>= 0)
 	
-def find_possible_moves(x,y):
-	if(board[x,y] == 0):
-		return []
-	
-	moves = []
-	
+directions_rook = [
+	(0, -1),
+	(0, 1),
+	(-1, 0),
+	(1, 0)
+]
+
+directions_bishop = [
+	(-1, -1),
+	(1, -1),
+	(1, 1),
+	(-1, 1)
+]
+
+directions_knight = [
+	(-2, -1),
+	(-2, 1),
+	(2, -1),
+	(2, 1),
+	(1, 2),
+	(1, -2),
+	(-1, 2),
+	(-1, -2)
+]
+
+directions_pawn = [
+	(-1, 1),
+	(-1, -1)
+]
+
+directions_king = [
+	(-1, -1),
+	(-1, 0),
+	(-1, 1),
+	(0, -1),
+	(0, 1),
+	(1, -1),
+	(1, 0),
+	(1, 1)
+]
+
 def is_check():
-	global board
+	global board, directions_pawn, directions_knight, directions_biship, directions_rook
 	for king_color in ['white', 'black']:
 		king_pos = find_king(king_color)
 		
-		directions_rook = [
-			(0, -1),
-			(0, 1),
-			(-1, 0),
-			(1, 0)
-			]
-		
-		directions_bishop = [
-			(-1, -1),
-			(1, -1),
-			(1, 1),
-			(-1, 1)
-			]
-		
-		directions_knight = [
-			(-2, -1),
-			(-2, 1),
-			(2, -1),
-			(2, 1),
-			(1, 2),
-			(1, -2),
-			(-1, 2),
-			(-1, -2)
-			]
+		checked_from = []
 		
 		for i,j in directions_rook:
 			isChecked = False
@@ -224,8 +238,9 @@ def is_check():
 					if(board[x, y][1] == king_color):
 						break
 					if(board[x, y][0] in ['rook','queen']):
-						print(board[x, y][0])
-						return True, king_color
+						#print(board[x, y][0])
+						#checked_from.append((x,y))
+						return king_color
 				else:
 					break
 					
@@ -241,8 +256,9 @@ def is_check():
 					if(board[x, y][1] == king_color):
 						break
 					if(board[x, y][0] in ['bishop','queen']):
-						print(board[x, y][0])
-						return True, king_color
+						#print(board[x, y][0])
+						#checked_from.append((x,y))
+						return king_color
 				else:
 					break
 					
@@ -250,15 +266,12 @@ def is_check():
 		for i,j in directions_knight:
 			if(is_valid_coord(x + i, y + j) and board[x + i, y + j] != 0):
 				if(board[x + i, y + j][0] == 'knight' and board[x + i, y + j][1] != king_color):
-					print('knight')
-					return True, king_color
+					#print('knight')
+					#checked_from.append((x,y))
+					return king_color
 				
 		x, y = king_pos
-		directions_pawn = [
-			(-1, 1),
-			(-1, -1)
-			]
-			
+		
 		if(king_color == 'black'):
 			directions_pawn = [
 				(1, 1),
@@ -268,17 +281,226 @@ def is_check():
 		for i,j in directions_pawn:
 			if(is_valid_coord(x + i, y + j) and board[x + i, y + j] != 0):
 				if(board[x + i, y + j][1] != king_color and board[x + i, y + j][0] == 'pawn'):
-					print('pawn')
-					return True, king_color	
+					#print('pawn')
+					#checked_from.append((x,y))
+					return king_color	
+	
+	return None, None
 
+fen_figures = {
+	('queen','white') : 'Q',
+	('king', 'white') : 'K',
+	('bishop', 'white') : 'B',
+	('knight', 'white') : 'N',
+	('rook', 'white') : 'R',
+	('pawn', 'white') : 'P',
+	('queen','black') : 'q',
+	('king', 'black') : 'k',
+	('bishop', 'black') : 'b',
+	('knight', 'black') : 'n',
+	('rook', 'black') : 'r',
+	('pawn', 'black') : 'p',
+	}
+
+def print_fen_notation():
+	global board
+	notation = ""
+	for i in range(8):
+		if(i != 0):
+			notation += "/"
+		s = ""
+		k = 0
+		for j in range(8):
+			if(board[i,j] == 0):
+				k += 1
+				continue
+			if(k != 0):
+				s += str(k)
+				k = 0
+			s += fen_figures[board[i,j]]
+		if(k != 0):
+			s += str(k)
+		
+		notation += s
+	
+	print(notation)
+
+def print_is_checkmate(color):
+	global board
+	
+	for fx in range(8):
+		for fy in range(8):
+			if(board[fx,fy] != 0 and board[fx,fy][1] == color):
+				
+				#check if figure can move like rook
+				if(board[fx,fy][0] in ['rook','queen']):
+					for i,j in directions_rook:
+						x, y = fx, fy
+						
+						#if the figure hits opponent figure, it cannot move after eating it
+						haveToStop = False
+						while True:
+							x += i
+							y += j
+							if(not is_valid_coord(x, y) or (board[x,y] != 0 and board[x,y][1] == color)):
+								break
+							
+							if(board[x,y] != 0 and board[x,y][1] != color):
+								haveToStop = True
+							
+							prevBoard = deepcopy(board[x,y])
+							board[x,y] = deepcopy(board[fx,fy])
+							board[fx,fy] = 0
+							if(is_check() == (None, None)):
+								print('0')
+								return
+							board[fx,fy] = deepcopy(board[x,y])
+							board[x,y] = deepcopy(prevBoard)
+							
+							if(haveToStop):
+								break
+					
+				#check if figure can move like bishop		
+				if(board[fx,fy][0] in ['bishop','queen']):
+					for i,j in directions_bishop:
+						x, y = fx, fy
+						haveToStop = False
+						while True:
+							x += i
+							y += j
+							if(not is_valid_coord(x, y) or (board[x,y] != 0 and board[x,y][1] == color)):
+								break
+							
+							if(board[x,y] != 0 and board[x,y][1] != color):
+								haveToStop = True
+							
+							prevBoard = deepcopy(board[x,y])
+							board[x,y] = deepcopy(board[fx,fy])
+							board[fx,fy] = 0
+							if(is_check() == (None, None)):
+								print('0')
+								return
+							board[fx,fy] = deepcopy(board[x,y])
+							board[x,y] = deepcopy(prevBoard)
+							
+							if(haveToStop):
+								break
+							
+				#check if figure is pawn
+				if(board[fx,fy][0] == 'pawn'):
+					start = 1
+					
+					directions_pawn = [
+						(1, 0),
+						(1, 1),
+						(1, -1)
+					]
+					
+					if(color == 'white'):
+						start = 6
+						directions_pawn = [
+							(-1, 0),
+							(-1, 1),
+							(-1, -1)
+						]
+					
+					x,y = fx,fy
+					for i,j in directions_pawn:
+						x += i
+						y += j
+						if(not is_valid_coord(x, y) or (board[x,y] != 0 and board[x,y][1] == color)):
+							continue
+						
+						prevBoard = deepcopy(board[x,y])
+						board[x,y] = deepcopy(board[fx,fy])
+						board[fx,fy] = 0
+						if(is_check() == (None, None)):
+							print('0')
+							return
+						board[fx,fy] = deepcopy(board[x,y])
+						board[x,y] = deepcopy(prevBoard)
+						
+						#pawn double move from starting line
+						if(j == 0 and fx == start):
+							x += i
+							if(not is_valid_coord(x, y) or (board[x,y] != 0 and board[x,y][1] == color)):
+								continue
+						
+							prevBoard = deepcopy(board[x,y])
+							board[x,y] = deepcopy(board[fx,fy])
+							board[fx,fy] = 0
+							if(is_check() == (None, None)):
+								print('0')
+								return
+							board[fx,fy] = deepcopy(board[x,y])
+							board[x,y] = deepcopy(prevBoard)
+				#end pawn check
+
+				#check if figure is knight
+				if(board[fx,fy][0] == 'knight'):
+					for i,j in directions_knight:
+						x, y = fx, fy
+						x += i
+						y += j
+						if(not is_valid_coord(x, y) or (board[x,y] != 0 and board[x,y][1] == color)):
+							continue
+												
+						prevBoard = deepcopy(board[x,y])
+						board[x,y] = deepcopy(board[fx,fy])
+						board[fx,fy] = 0
+						if(is_check() == (None, None)):
+							print('0')
+							return
+						board[fx,fy] = deepcopy(board[x,y])
+						board[x,y] = deepcopy(prevBoard)
+				#end knight check
+				
+				#check if figure is king
+				if(board[fx,fy][0] == 'king'):
+					for i,j in directions_king:
+						x, y = fx, fy
+						x += i
+						y += j
+						if(not is_valid_coord(x, y) or (board[x,y] != 0 and board[x,y][1] == color)):
+							continue
+												
+						prevBoard = deepcopy(board[x,y])
+						board[x,y] = deepcopy(board[fx,fy])
+						board[fx,fy] = 0
+						if(is_check() == (None, None)):
+							for s,l in directions_king:
+								if(not is_valid_coord(x + s, y + l)):
+									continue
+								if(board[x + s, y + l] != 0 and board[x + s, y + l][0] == 'king' and  board[x + s, y + l][1] != color):
+									break
+							else:
+								print('0')
+								return
+						board[fx,fy] = deepcopy(board[x,y])
+						board[x,y] = deepcopy(prevBoard)
+				#end king check
+				
+	print('1')
+	return				
+	
 # %%
-board = np.array(read_board_from_image())
-
-# %%
-
-print(is_check())
-
-
-
-
-
+#directory_path = input()
+for sss in range(25):
+	print(str(sss) + "**************************************")
+	directory_path = "D:/GitHub/Chess-solver/public/set/" + str(sss)
+	
+	board = np.array(read_board_from_image(directory_path))
+	print_fen_notation()
+	
+	checked_color = is_check()
+	
+	if(checked_color == None):
+		print("-")
+		print('0')
+	else:
+		if(checked_color == 'white'):
+			print('B')
+		else:
+			print('W')
+	
+		print_is_checkmate(checked_color)
